@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Charlie's Chores</title>
+<style>
+  :root {
+    --accent: #0EA5E9;
+    --accent2: #38BDF8;
+    --orange: #F97316;
+    --yellow: #FBBF24;
+    --green: #10B981;
+    --red: #EF4444;
+    --bg: #0A1628;
+    --card: #0F1E35;
+    --card2: #152844;
+    --text: #EFF6FF;
+    --muted: #6B8BAD;
+    --border: rgba(14,165,233,0.22);
+    --radius: 20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 50px;
+    overflow-x: hidden;
+  }
+
+  #particle-canvas {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 9999;
+  }
+
+  .header {
+    background: linear-gradient(160deg, #0C2340 0%, #0A1628 100%);
+    padding: 28px 20px 18px;
+    text-align: center;
+    border-bottom: 2px solid #1E3A5F;
+    box-shadow: 0 4px 30px rgba(14,165,233,0.15);
+  }
+
+  .header h1 {
+    font-size: 1.9rem; font-weight: 800;
+    background: linear-gradient(90deg, #38BDF8, #FBBF24, #F97316);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    letter-spacing: -0.5px;
+  }
+
+  .header-sub { font-size: 0.82rem; color: var(--muted); margin-top: 3px; font-weight: 600; }
+
+  .timer-bar {
+    background: linear-gradient(135deg, #0F2034, #152844);
+    border: 1.5px solid #1E3A5F; border-radius: 16px;
+    margin: 14px 14px 0; padding: 13px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+
+  .timer-left { display: flex; align-items: center; gap: 10px; }
+  .timer-icon { font-size: 1.4rem; }
+  .timer-label { font-size: 0.72rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .timer-days { font-size: 1.4rem; font-weight: 800; color: var(--yellow); line-height: 1; }
+  .timer-days span { font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+  .week-progress-wrap { flex: 1; max-width: 150px; }
+  .week-progress-track { height: 9px; background: rgba(255,255,255,0.07); border-radius: 10px; overflow: hidden; margin-bottom: 4px; }
+  .week-progress-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--green), var(--yellow)); transition: width 0.5s ease; }
+  .week-progress-label { font-size: 0.7rem; color: var(--muted); text-align: right; font-weight: 700; }
+
+  .bank-card {
+    background: linear-gradient(135deg, #0369A1, #0EA5E9, #0284C7);
+    border-radius: var(--radius); margin: 12px 14px 0; padding: 18px 20px;
+    position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(14,165,233,0.3);
+  }
+
+  .bank-card::before {
+    content: ''; position: absolute; top: -40px; right: -40px;
+    width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,0.07);
+  }
+
+  .bank-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; margin-bottom: 2px; }
+
+  .bank-amount { font-size: 2.8rem; font-weight: 800; line-height: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.25); }
+  .bank-amount .cents { font-size: 1.6rem; }
+  .bank-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 10px; }
+  .allowance-badge { background: rgba(255,255,255,0.15); border-radius: 30px; padding: 5px 12px; font-size: 0.77rem; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+  .parent-btn { background: rgba(255,255,255,0.2); border: none; border-radius: 30px; padding: 7px 15px; color: #fff; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
+  .parent-btn:active { background: rgba(255,255,255,0.32); }
+
+  .progress-area {
+    display: flex; align-items: center; gap: 18px;
+    margin: 12px 14px 0; background: var(--card);
+    border-radius: var(--radius); padding: 16px;
+    border: 1.5px solid var(--border);
+  }
+
+  .ring-wrap { position: relative; width: 84px; height: 84px; flex-shrink: 0; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 8; }
+  .ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; stroke: url(#ringGrad); transition: stroke-dashoffset 0.5s ease; }
+  .ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; line-height: 1; font-size: 1.3rem; font-weight: 800; color: var(--text); }
+  .ring-text small { display: block; font-size: 0.55rem; color: var(--muted); font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+  .progress-info { flex: 1; }
+  .progress-title { font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .progress-sub { font-size: 0.8rem; color: var(--muted); font-weight: 600; line-height: 1.5; }
+
+  .section-title { font-size: 1rem; font-weight: 800; color: #38BDF8; margin: 18px 14px 9px; display: flex; align-items: center; gap: 7px; }
+
+  .chore-card { background: var(--card); border-radius: var(--radius); margin: 0 14px 11px; border: 1.5px solid var(--border); overflow: hidden; transition: border-color 0.3s, box-shadow 0.3s; }
+  .chore-card.done { border-color: var(--green); box-shadow: 0 0 18px rgba(16,185,129,0.18); }
+  .chore-main { display: flex; align-items: center; padding: 15px; gap: 13px; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .chore-emoji { font-size: 1.7rem; flex-shrink: 0; }
+  .chore-info { flex: 1; }
+  .chore-name { font-weight: 800; font-size: 0.97rem; color: var(--text); margin-bottom: 2px; }
+  .chore-desc { font-size: 0.76rem; color: var(--muted); font-weight: 600; }
+  .chore-sub-pill { font-size: 0.68rem; font-weight: 800; background: rgba(14,165,233,0.18); color: #38BDF8; padding: 3px 9px; border-radius: 20px; display: inline-block; margin-top: 5px; }
+  .chore-check { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: all 0.25s; flex-shrink: 0; background: rgba(255,255,255,0.04); }
+  .chore-check.checked { background: var(--green); border-color: var(--green); box-shadow: 0 0 12px rgba(16,185,129,0.45); }
+  .expand-btn { font-size: 0.8rem; color: var(--muted); transition: transform 0.3s; flex-shrink: 0; margin-left: -5px; }
+  .expand-btn.open { transform: rotate(180deg); }
+
+  .subtasks { border-top: 1px solid rgba(255,255,255,0.06); overflow: hidden; max-height: 0; transition: max-height 0.35s ease; }
+  .subtasks.open { max-height: 300px; }
+  .subtask-item { display: flex; align-items: center; gap: 11px; padding: 11px 15px 11px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .subtask-item:last-child { border-bottom: none; }
+  .subtask-item:active { background: rgba(255,255,255,0.04); }
+  .sub-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background 0.2s; }
+  .sub-dot.checked { background: var(--green); }
+  .subtask-label { flex: 1; font-size: 0.86rem; font-weight: 700; color: var(--muted); transition: color 0.2s; }
+  .subtask-label.done-text { color: var(--green); text-decoration: line-through; text-decoration-color: rgba(16,185,129,0.4); }
+  .sub-check { width: 27px; height: 27px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; transition: all 0.2s; background: rgba(255,255,255,0.03); flex-shrink: 0; }
+  .sub-check.checked { background: var(--green); border-color: var(--green); box-shadow: 0 0 8px rgba(16,185,129,0.35); }
+
+  .adhoc-card { background: linear-gradient(135deg, rgba(251,191,36,0.1), rgba(249,115,22,0.07)); border: 1.5px solid rgba(251,191,36,0.28); }
+  .adhoc-card.done { border-color: var(--green); box-shadow: 0 0 18px rgba(16,185,129,0.18); }
+  .adhoc-value { font-size: 1rem; font-weight: 800; color: var(--yellow); flex-shrink: 0; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal { background: var(--card2); border-radius: 24px; border: 1.5px solid rgba(14,165,233,0.3); padding: 26px 22px; width: 100%; max-width: 380px; transform: translateY(30px); transition: transform 0.3s; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 5px; color: var(--text); }
+  .modal p { font-size: 0.83rem; color: var(--muted); margin-bottom: 16px; font-weight: 600; }
+  .modal-input { width: 100%; background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.11); border-radius: 14px; padding: 13px 15px; color: var(--text); font-size: 0.97rem; font-weight: 700; outline: none; margin-bottom: 12px; transition: border-color 0.2s; -webkit-appearance: none; }
+  .modal-input:focus { border-color: #38BDF8; }
+  .modal-input.pin-input { text-align: center; font-size: 2rem; font-weight: 800; letter-spacing: 10px; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 4px; }
+  .btn-primary { flex: 1; background: linear-gradient(135deg, #0369A1, #F97316); border: none; border-radius: 14px; padding: 14px; color: #fff; font-weight: 800; font-size: 0.97rem; cursor: pointer; }
+  .btn-primary:active { opacity: 0.8; }
+  .btn-secondary { background: rgba(255,255,255,0.07); border: none; border-radius: 14px; padding: 14px 18px; color: var(--muted); font-weight: 800; font-size: 0.97rem; cursor: pointer; }
+
+  .emoji-picker { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+  .emoji-opt { width: 42px; height: 42px; border-radius: 11px; background: rgba(255,255,255,0.06); border: 2px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; cursor: pointer; transition: all 0.2s; }
+  .emoji-opt.selected { border-color: #38BDF8; background: rgba(56,189,248,0.18); transform: scale(1.1); }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tab-btn { flex: 1; padding: 9px 4px; border-radius: 11px; border: 1.5px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.04); color: var(--muted); font-weight: 800; font-size: 0.77rem; cursor: pointer; text-align: center; }
+  .tab-btn.active { background: rgba(14,165,233,0.22); border-color: #38BDF8; color: #38BDF8; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .scroll-area { max-height: 300px; overflow-y: auto; }
+  .tx-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.83rem; }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-desc { color: var(--text); font-weight: 700; flex: 1; }
+  .tx-date { color: var(--muted); font-size: 0.7rem; margin-top: 1px; }
+  .tx-amount { font-size: 1rem; font-weight: 800; }
+  .tx-amount.pos { color: var(--green); }
+  .tx-amount.neg { color: var(--red); }
+
+  .celebration { position: fixed; inset: 0; background: linear-gradient(135deg, rgba(3,105,161,0.97), rgba(10,22,40,0.99)); z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+  .celebration.show { opacity: 1; pointer-events: all; }
+  .cel-emoji { font-size: 5rem; margin-bottom: 14px; animation: bounce 0.6s infinite alternate; }
+  @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-18px); } }
+  .cel-title { font-size: 2.6rem; font-weight: 800; background: linear-gradient(90deg,#38BDF8,#FBBF24,#F97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px; }
+  .cel-sub { font-size: 1rem; color: rgba(255,255,255,0.78); font-weight: 700; margin-bottom: 8px; }
+  .cel-reward { font-size: 3.2rem; font-weight: 800; color: var(--yellow); text-shadow: 0 0 28px rgba(251,191,36,0.55); margin: 8px 0 18px; }
+  .cel-note { font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-bottom: 22px; font-weight: 600; }
+  .cel-btn { background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.28); border-radius: 50px; padding: 13px 38px; color: #fff; font-weight: 800; font-size: 1.05rem; cursor: pointer; }
+
+  .error-msg { color: var(--red); font-size: 0.8rem; font-weight: 700; text-align: center; margin-bottom: 9px; }
+  .modal-section-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
+
+  @keyframes checkPulse { 0%{transform:scale(1)} 40%{transform:scale(1.28)} 70%{transform:scale(0.93)} 100%{transform:scale(1)} }
+  .check-pulse { animation: checkPulse 0.4s ease forwards; }
+</style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+
+<div class="header">
+  <h1>⭐ Charlie's Chores ⭐</h1>
+  <div class="header-sub">Keep it up — you're doing amazing!</div>
+</div>
+
+<div class="timer-bar">
+  <div class="timer-left">
+    <div class="timer-icon">⏳</div>
+    <div>
+      <div class="timer-label">Time Left</div>
+      <div class="timer-days" id="days-left">— <span>days</span></div>
+    </div>
+  </div>
+  <div class="week-progress-wrap">
+    <div class="week-progress-track"><div class="week-progress-fill" id="week-progress-fill" style="width:0%"></div></div>
+    <div class="week-progress-label" id="week-progress-label">Week progress</div>
+  </div>
+</div>
+
+<div class="bank-card">
+  <div class="bank-label">💰 Charlie's Bank</div>
+  <div class="bank-amount" id="balance-display">$0<span class="cents">.00</span></div>
+  <div class="bank-footer">
+    <div class="allowance-badge">🎯 Weekly Allowance: <strong>$10</strong></div>
+    <button class="parent-btn" onclick="openPinModal()">👨‍💼 Parent</button>
+  </div>
+</div>
+
+<div class="progress-area">
+  <div class="ring-wrap">
+    <svg width="84" height="84" viewBox="0 0 84 84">
+      <defs>
+        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#38BDF8"/>
+          <stop offset="100%" stop-color="#F97316"/>
+        </linearGradient>
+      </defs>
+      <circle class="ring-bg" cx="42" cy="42" r="35"/>
+      <circle class="ring-fill" id="ring-fill" cx="42" cy="42" r="35" stroke-dasharray="219.91" stroke-dashoffset="219.91"/>
+    </svg>
+    <div class="ring-text"><span id="ring-pct">0%</span><small>done</small></div>
+  </div>
+  <div class="progress-info">
+    <div class="progress-title" id="progress-title">Let's get started! 🚀</div>
+    <div class="progress-sub" id="progress-sub">Tap a chore to start. You got this, Charlie!</div>
+  </div>
+</div>
+
+<div class="section-title">📋 This Week's Chores</div>
+<div id="chores-container"></div>
+<div class="section-title" id="adhoc-section-title" style="display:none">⚡ Bonus Chores</div>
+<div id="adhoc-container"></div>
+
+<div class="celebration" id="celebration">
+  <div class="cel-emoji">🥳</div>
+  <div class="cel-title">All Done!</div>
+  <div class="cel-sub">You crushed it this week, Charlie!</div>
+  <div class="cel-reward">+$10.00</div>
+  <div class="cel-note">Weekly Allowance added to your bank!</div>
+  <button class="cel-btn" onclick="closeCelebration()">Woohoo! 🎉</button>
+</div>
+
+<div class="modal-overlay" id="pin-modal">
+  <div class="modal">
+    <h2>🔐 Parent Access</h2>
+    <p>Enter your PIN to continue</p>
+    <input type="password" inputmode="numeric" maxlength="4" class="modal-input pin-input" id="pin-input" placeholder="••••">
+    <div class="error-msg" id="pin-error" style="display:none">Wrong PIN. Try again!</div>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeModal('pin-modal')">Cancel</button>
+      <button class="btn-primary" onclick="checkPin()">Enter</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="parent-modal">
+  <div class="modal" style="max-height:88vh;overflow-y:auto;">
+    <h2>👨‍💼 Parent Panel</h2>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('spend')">💸 Spend</button>
+      <button class="tab-btn" onclick="switchTab('bonus')">➕ Bonus</button>
+      <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
+    </div>
+    <div class="tab-panel active" id="tab-spend">
+      <p>Deduct money from Charlie's bank.</p>
+      <input type="number" class="modal-input" id="deduct-amount" placeholder="Amount ($)" min="0" step="0.01">
+      <input type="text" class="modal-input" id="deduct-reason" placeholder="Reason (e.g. Video game)">
+      <div class="modal-btns">
+        <button class="btn-secondary" onclick="closeModal('parent-modal')">Cancel</button>
+        <button class="btn-primary" onclick="deductMoney()">Deduct 💸</button>
+      </div>
+    </div>
+    <div class="tab-panel" id="tab-bonus">
+      <p>Add a one-time bonus chore for Charlie.</p>
+      <div class="modal-section-title">Pick an emoji</div>
+      <div class="emoji-picker" id="emoji-picker"></div>
+      <input type="text" class="modal-input" id="bonus-name" placeholder="Chore name (e.g. Wash the car)">
+      <input type="number" class="modal-input" id="bonus-value" placeholder="Reward ($)" min="0.50" step="0.50">
+      <div class="modal-btns">
+        <button class="btn-secondary" onclick="closeModal('parent-modal')">Cancel</button>
+        <button class="btn-primary" onclick="addBonusChore()">Add Chore ➕</button>
+      </div>
+    </div>
+    <div class="tab-panel" id="tab-history">
+      <p>All of Charlie's earnings and spending.</p>
+      <div class="scroll-area"><div class="tx-list" id="tx-list"></div></div>
+      <div class="modal-btns" style="margin-top:12px;">
+        <button class="btn-secondary" onclick="closeModal('parent-modal')" style="flex:1">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PARENT_PIN = '1234';
+const CIRC = 219.91;
+
+// ── Safe storage: works even when localStorage is blocked (iOS local files) ──
+const Store = (function(){
+  const KEY = 'charlies-chores-v4';
+  let mem = null;
+  function ok(){
+    try{ localStorage.setItem('__x','1'); localStorage.removeItem('__x'); return true; }catch(e){ return false; }
+  }
+  return {
+    load: function(){
+      if(ok()){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s) return s; }catch(e){} }
+      return mem;
+    },
+    save: function(d){
+      if(ok()){ try{ localStorage.setItem(KEY,JSON.stringify(d)); }catch(e){} }
+      mem = d;
+    }
+  };
+})();
+
+const WEEKLY_CHORES = [
+  { id:'clean-room', emoji:'🛏️', name:'Clean My Room', desc:'Tidy up everything!',
+    subtasks:[{id:'cr-1',label:'Pick up & organize'},{id:'cr-2',label:'Make the bed'},{id:'cr-3',label:'Tidy the desk'}] },
+  { id:'vacuum', emoji:'🧹', name:'Vacuuming', desc:'Get all the floors sparkling!',
+    subtasks:[{id:'vac-1',label:'Vacuum my room'},{id:'vac-2',label:'Vacuum upstairs hallway'},{id:'vac-3',label:'Vacuum bathroom'}] },
+  { id:'laundry', emoji:'🧺', name:'Laundry', desc:'Gather and take to laundry room', subtasks:null },
+  { id:'dishwasher', emoji:'🍽️', name:'Unload Dishwasher', desc:'Put everything away neatly', subtasks:null }
+];
+
+const EMOJIS = ['⭐','🌟','🚗','🌈','🐕','🏆','🎮','🍕','🧹','🛒','🏠','🌿','📦','🧴','💪','🎯','🔧','🌻','💩','🎨'];
+
+function defaultState(){
+  return { balance:0, weekKey:getWeekKey(), choreStatus:{}, subtaskStatus:{},
+           allowancePaid:false, transactions:[], adhocChores:[], expanded:{}, selectedEmoji:'⭐' };
+}
+
+var state = Store.load() || defaultState();
+
+function getWeekKey(){
+  var d=new Date(), day=d.getDay(), diff=d.getDate()-day+(day===0?-6:1);
+  var mon=new Date(d); mon.setDate(diff);
+  return mon.getFullYear()+'-'+mon.getMonth()+'-'+mon.getDate();
+}
+
+function checkWeekReset(){
+  var wk=getWeekKey();
+  if(state.weekKey!==wk){
+    state.weekKey=wk; state.choreStatus={}; state.subtaskStatus={};
+    state.allowancePaid=false; state.expanded={};
+    state.adhocChores=state.adhocChores.filter(function(c){ return !c.done; });
+    saveState();
+  }
+}
+
+function saveState(){ Store.save(state); }
+
+function getDaysRemaining(){ var d=new Date().getDay(); return d===0?0:7-d; }
+
+function getWeekPct(){
+  var d=new Date().getDay(), dw=d===0?7:d;
+  return Math.min(100,((dw-1)/7)*100);
+}
+
+function isChoreComplete(c){
+  return c.subtasks ? c.subtasks.every(function(s){ return state.subtaskStatus[s.id]; }) : !!state.choreStatus[c.id];
+}
+
+function allWeeklyDone(){ return WEEKLY_CHORES.every(function(c){ return isChoreComplete(c); }); }
+
+function getTotalTasks(){
+  var t=0;
+  WEEKLY_CHORES.forEach(function(c){ t+=c.subtasks?c.subtasks.length:1; });
+  state.adhocChores.forEach(function(){ t++; });
+  return t;
+}
+
+function getCompletedTasks(){
+  var d=0;
+  WEEKLY_CHORES.forEach(function(c){
+    if(c.subtasks) c.subtasks.forEach(function(s){ if(state.subtaskStatus[s.id]) d++; });
+    else if(state.choreStatus[c.id]) d++;
+  });
+  state.adhocChores.forEach(function(c){ if(c.done) d++; });
+  return d;
+}
+
+function render(){ checkWeekReset(); renderTimerBar(); renderBalance(); renderProgress(); renderChores(); renderAdhoc(); }
+
+function renderTimerBar(){
+  var days=getDaysRemaining(), el=document.getElementById('days-left');
+  el.innerHTML=days+' <span>'+(days===1?'day':'days')+'</span>';
+  el.style.color=days<=1?'#EF4444':days<=2?'#F97316':'#FBBF24';
+  document.getElementById('week-progress-fill').style.width=getWeekPct()+'%';
+  document.getElementById('week-progress-label').textContent='Day '+Math.max(1,7-days)+' of 7';
+}
+
+function renderBalance(){
+  var bal=state.balance/100, whole=Math.floor(bal);
+  var cents=String(Math.round((bal-whole)*100)).padStart(2,'0');
+  document.getElementById('balance-display').innerHTML='$'+whole+'<span class="cents">.'+cents+'</span>';
+}
+
+function renderProgress(){
+  var total=getTotalTasks(), done=getCompletedTasks();
+  var pct=total>0?Math.round((done/total)*100):0;
+  document.getElementById('ring-fill').style.strokeDashoffset=CIRC-(pct/100)*CIRC;
+  document.getElementById('ring-pct').textContent=pct+'%';
+  var t=document.getElementById('progress-title'), s=document.getElementById('progress-sub');
+  if(pct===0){ t.textContent="Let's get started! 🚀"; s.textContent="Tap a chore to start. You got this, Charlie!"; }
+  else if(pct<50){ t.textContent="Good start! Keep going 💪"; s.textContent=done+' of '+total+' tasks done. Building momentum!'; }
+  else if(pct<100){ t.textContent="So close! Almost there 🔥"; s.textContent=done+' of '+total+' done. Finish for your $10 allowance!'; }
+  else{ t.textContent="All done! You're a star ⭐"; s.textContent="Every chore complete. Amazing work this week!"; }
+}
+
+function renderChores(){
+  var container=document.getElementById('chores-container');
+  container.innerHTML='';
+  WEEKLY_CHORES.forEach(function(chore){
+    var done=isChoreComplete(chore);
+    var card=document.createElement('div');
+    card.className='chore-card'+(done?' done':'');
+    card.id='card-'+chore.id;
+    var subPill='', subHTML='';
+    if(chore.subtasks){
+      var dc=chore.subtasks.filter(function(s){ return state.subtaskStatus[s.id]; }).length;
+      subPill='<div class="chore-sub-pill" id="pill-'+chore.id+'">'+dc+'/'+chore.subtasks.length+' done</div>';
+      var items=chore.subtasks.map(function(s){
+        var sc=state.subtaskStatus[s.id];
+        return '<div class="subtask-item" onclick="toggleSubtask(\''+chore.id+'\',\''+s.id+'\')">'+
+          '<div class="sub-dot '+(sc?'checked':'')+'" id="dot-'+s.id+'"></div>'+
+          '<div class="subtask-label '+(sc?'done-text':'')+'" id="slabel-'+s.id+'">'+s.label+'</div>'+
+          '<div class="sub-check '+(sc?'checked':'')+'" id="subcheck-'+s.id+'">'+(sc?'✓':'')+'</div>'+
+          '</div>';
+      }).join('');
+      subHTML='<div class="subtasks '+(state.expanded[chore.id]?'open':'')+'" id="subs-'+chore.id+'">'+items+'</div>';
+    }
+    card.innerHTML=
+      '<div class="chore-main" onclick="'+(chore.subtasks?'toggleExpand(\''+chore.id+'\')':'toggleChore(\''+chore.id+'\')')+'">'+
+        '<div class="chore-emoji">'+chore.emoji+'</div>'+
+        '<div class="chore-info">'+
+          '<div class="chore-name">'+chore.name+'</div>'+
+          '<div class="chore-desc">'+chore.desc+'</div>'+
+          subPill+
+        '</div>'+
+        (chore.subtasks?'<div class="expand-btn '+(state.expanded[chore.id]?'open':'')+'" id="expand-'+chore.id+'">▼</div>':'')+
+        '<div class="chore-check '+(done?'checked':'')+'" id="check-'+chore.id+'">'+(done?'✓':'')+'</div>'+
+      '</div>'+subHTML;
+    container.appendChild(card);
+  });
+}
+
+function renderAdhoc(){
+  var c=document.getElementById('adhoc-container'), t=document.getElementById('adhoc-section-title');
+  c.innerHTML='';
+  if(!state.adhocChores.length){ t.style.display='none'; return; }
+  t.style.display='flex';
+  state.adhocChores.forEach(function(chore,i){
+    var card=document.createElement('div');
+    card.className='chore-card adhoc-card'+(chore.done?' done':'');
+    var val=(chore.value/100).toFixed(2);
+    card.innerHTML='<div class="chore-main" onclick="toggleAdhoc('+i+')">'+
+      '<div class="chore-emoji">'+chore.emoji+'</div>'+
+      '<div class="chore-info"><div class="chore-name">'+chore.name+'</div><div class="chore-desc">Bonus chore • tap to complete</div></div>'+
+      '<div class="adhoc-value">+$'+val+'</div>'+
+      '<div class="chore-check '+(chore.done?'checked':'')+'" id="adhoc-check-'+i+'">'+(chore.done?'✓':'')+'</div>'+
+      '</div>';
+    c.appendChild(card);
+  });
+}
+
+function getCenter(el){ var r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; }
+
+function pulse(el){ el.classList.add('check-pulse'); setTimeout(function(){ el.classList.remove('check-pulse'); },400); }
+
+function toggleExpand(id){
+  state.expanded[id]=!state.expanded[id]; saveState();
+  var s=document.getElementById('subs-'+id), e=document.getElementById('expand-'+id);
+  if(s) s.classList.toggle('open',!!state.expanded[id]);
+  if(e) e.classList.toggle('open',!!state.expanded[id]);
+}
+
+function toggleChore(id){
+  var chore=WEEKLY_CHORES.find(function(c){ return c.id===id; });
+  if(!chore||chore.subtasks) return;
+  state.choreStatus[id]=!state.choreStatus[id]; saveState();
+  var ck=document.getElementById('check-'+id), cd=document.getElementById('card-'+id);
+  if(state.choreStatus[id]){
+    ck.innerHTML='✓'; ck.classList.add('checked'); pulse(ck); cd.classList.add('done');
+    burstParticles(getCenter(cd),'main'); checkAllowance();
+  } else { ck.innerHTML=''; ck.classList.remove('checked'); cd.classList.remove('done'); }
+  renderProgress();
+}
+
+function toggleSubtask(choreId, subId){
+  state.subtaskStatus[subId]=!state.subtaskStatus[subId];
+  var chore=WEEKLY_CHORES.find(function(c){ return c.id===choreId; });
+  var allDone=chore.subtasks.every(function(s){ return state.subtaskStatus[s.id]; });
+  var sc=document.getElementById('subcheck-'+subId);
+  var dot=document.getElementById('dot-'+subId);
+  var lbl=document.getElementById('slabel-'+subId);
+  var ck=document.getElementById('check-'+choreId);
+  var cd=document.getElementById('card-'+choreId);
+  var pill=document.getElementById('pill-'+choreId);
+  if(state.subtaskStatus[subId]){
+    sc.innerHTML='✓'; sc.classList.add('checked'); pulse(sc);
+    dot.classList.add('checked'); lbl.classList.add('done-text');
+    if(allDone){
+      ck.innerHTML='✓'; ck.classList.add('checked'); pulse(ck); cd.classList.add('done');
+      burstParticles(getCenter(cd),'main'); checkAllowance();
+    } else { burstParticles(getCenter(sc),'sub'); }
+  } else {
+    sc.innerHTML=''; sc.classList.remove('checked');
+    dot.classList.remove('checked'); lbl.classList.remove('done-text');
+    ck.innerHTML=''; ck.classList.remove('checked'); cd.classList.remove('done');
+  }
+  var dc=chore.subtasks.filter(function(s){ return state.subtaskStatus[s.id]; }).length;
+  if(pill) pill.textContent=dc+'/'+chore.subtasks.length+' done';
+  saveState(); renderProgress();
+}
+
+function toggleAdhoc(i){
+  var chore=state.adhocChores[i]; if(chore.done) return; chore.done=true;
+  var cards=document.querySelectorAll('.adhoc-card');
+  var cd=cards[i], ck=document.getElementById('adhoc-check-'+i);
+  if(ck){ ck.innerHTML='✓'; ck.classList.add('checked'); pulse(ck); }
+  if(cd){ cd.classList.add('done'); burstParticles(getCenter(cd),'main'); }
+  state.balance+=chore.value; addTx('✅ '+chore.name,chore.value);
+  saveState(); renderBalance(); renderProgress();
+}
+
+function checkAllowance(){
+  if(allWeeklyDone()&&!state.allowancePaid){
+    state.allowancePaid=true; state.balance+=1000; addTx('🏆 Weekly Allowance',1000); saveState();
+    setTimeout(function(){ renderBalance(); bigCelebration(); },600);
+  }
+}
+
+// ── Particles ──
+var canvas=document.getElementById('particle-canvas'), ctx=canvas.getContext('2d'), particles=[];
+function resizeCanvas(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+resizeCanvas(); window.addEventListener('resize',resizeCanvas);
+
+var CM=['#FBBF24','#F97316','#38BDF8','#10B981','#EF4444','#fff','#0EA5E9'];
+var CS=['#38BDF8','#10B981','#FBBF24'];
+
+function burstParticles(o,type){
+  var n=type==='main'?40:14, sp=type==='main'?9:4, colors=type==='main'?CM:CS, sz=type==='main'?[5,12]:[3,7];
+  for(var i=0;i<n;i++){
+    var a=(Math.PI*2*i)/n+Math.random()*0.5, v=sp*(0.5+Math.random());
+    particles.push({ x:o.x,y:o.y, vx:Math.cos(a)*v, vy:Math.sin(a)*v-(type==='main'?3:1),
+      color:colors[Math.floor(Math.random()*colors.length)],
+      size:sz[0]+Math.random()*(sz[1]-sz[0]), alpha:1, decay:0.015+Math.random()*0.02,
+      gravity:0.25, rotation:Math.random()*Math.PI*2, rotSpeed:(Math.random()-0.5)*0.2,
+      shape:Math.random()>0.5?'rect':'circle' });
+  }
+}
+
+function animateParticles(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles=particles.filter(function(p){ return p.alpha>0.02; });
+  particles.forEach(function(p){
+    p.x+=p.vx; p.y+=p.vy; p.vy+=p.gravity; p.vx*=0.98; p.alpha-=p.decay; p.rotation+=p.rotSpeed;
+    ctx.save(); ctx.globalAlpha=Math.max(0,p.alpha); ctx.fillStyle=p.color;
+    ctx.translate(p.x,p.y); ctx.rotate(p.rotation);
+    if(p.shape==='rect'){ ctx.fillRect(-p.size/2,-p.size/4,p.size,p.size/2); }
+    else{ ctx.beginPath(); ctx.arc(0,0,p.size/2,0,Math.PI*2); ctx.fill(); }
+    ctx.restore();
+  });
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+function bigCelebration(){
+  var cx=window.innerWidth/2, cy=window.innerHeight/3;
+  burstParticles({x:cx,y:cy},'main');
+  setTimeout(function(){ burstParticles({x:cx*0.6,y:cy*1.5},'main'); },150);
+  setTimeout(function(){ burstParticles({x:cx*1.4,y:cy*1.5},'main'); },300);
+  setTimeout(function(){ burstParticles({x:cx,y:cy*2},'main'); },450);
+  setTimeout(function(){ document.getElementById('celebration').classList.add('show'); },650);
+}
+
+// ── Modals ──
+function openPinModal(){ document.getElementById('pin-input').value=''; document.getElementById('pin-error').style.display='none'; document.getElementById('pin-modal').classList.add('open'); }
+function checkPin(){ var v=document.getElementById('pin-input').value; if(v===PARENT_PIN){ closeModal('pin-modal'); openParentPanel(); } else{ document.getElementById('pin-error').style.display='block'; document.getElementById('pin-input').value=''; } }
+document.getElementById('pin-input').addEventListener('keyup',function(e){ if(e.key==='Enter') checkPin(); });
+function openParentPanel(){ switchTab('spend'); renderEmojiPicker(); renderTxList(); document.getElementById('parent-modal').classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function switchTab(tab){
+  var tabs=['spend','bonus','history'];
+  document.querySelectorAll('.tab-btn').forEach(function(b,i){ b.classList.toggle('active',tabs[i]===tab); });
+  tabs.forEach(function(t){ document.getElementById('tab-'+t).classList.toggle('active',t===tab); });
+}
+function renderEmojiPicker(){
+  var picker=document.getElementById('emoji-picker'); picker.innerHTML='';
+  if(!state.selectedEmoji) state.selectedEmoji=EMOJIS[0];
+  EMOJIS.forEach(function(e){
+    var btn=document.createElement('div');
+    btn.className='emoji-opt'+(state.selectedEmoji===e?' selected':'');
+    btn.textContent=e;
+    btn.onclick=function(){ state.selectedEmoji=e; renderEmojiPicker(); };
+    picker.appendChild(btn);
+  });
+}
+function renderTxList(){
+  var list=document.getElementById('tx-list');
+  if(!state.transactions.length){ list.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-weight:700;">No transactions yet!</div>'; return; }
+  list.innerHTML=state.transactions.slice().reverse().map(function(tx){
+    var pos=tx.amount>0, amt=(Math.abs(tx.amount)/100).toFixed(2);
+    return '<div class="tx-item"><div><div class="tx-desc">'+tx.desc+'</div><div class="tx-date">'+tx.date+'</div></div><div class="tx-amount '+(pos?'pos':'neg')+'">'+(pos?'+':'-')+'$'+amt+'</div></div>';
+  }).join('');
+}
+function addTx(desc,amount){ var d=new Date(); state.transactions.push({desc:desc,amount:amount,date:d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}); }
+function deductMoney(){
+  var amt=parseFloat(document.getElementById('deduct-amount').value);
+  var reason=document.getElementById('deduct-reason').value.trim();
+  if(isNaN(amt)||amt<=0){ alert('Please enter a valid amount.'); return; }
+  if(!reason){ alert('Please enter a reason.'); return; }
+  var cents=Math.round(amt*100); state.balance-=cents; addTx('💸 '+reason,-cents); saveState(); renderBalance(); renderTxList();
+  document.getElementById('deduct-amount').value=''; document.getElementById('deduct-reason').value='';
+}
+function addBonusChore(){
+  var name=document.getElementById('bonus-name').value.trim();
+  var val=parseFloat(document.getElementById('bonus-value').value);
+  if(!name){ alert('Please enter a chore name.'); return; }
+  if(isNaN(val)||val<=0){ alert('Please enter a valid reward amount.'); return; }
+  state.adhocChores.push({emoji:state.selectedEmoji||'⭐',name:name,value:Math.round(val*100),done:false});
+  document.getElementById('bonus-name').value=''; document.getElementById('bonus-value').value='';
+  saveState(); closeModal('parent-modal'); render();
+}
+function closeCelebration(){ document.getElementById('celebration').classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(function(o){ o.addEventListener('click',function(e){ if(e.target===o) o.classList.remove('open'); }); });
+
+render();
+setInterval(renderTimerBar,60000);
+</script>
+</body>
+</html>
