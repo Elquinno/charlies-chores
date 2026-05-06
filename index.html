@@ -256,6 +256,19 @@
   <button class="cel-btn" onclick="closeCelebration()">Woohoo! 🎉</button>
 </div>
 
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <h2>🗑️ Remove Chore?</h2>
+    <p>Enter parent PIN to remove "<span id="delete-chore-name"></span>" from the list.</p>
+    <input type="password" inputmode="numeric" maxlength="4" class="modal-input pin-input" id="delete-pin-input" placeholder="••••">
+    <div class="error-msg" id="delete-pin-error" style="display:none">Wrong PIN. Try again!</div>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeModal('delete-modal')">Keep It</button>
+      <button class="btn-primary" onclick="checkDeletePin()">Remove 🗑️</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="pin-modal">
   <div class="modal">
     <h2>🔐 Parent Access</h2>
@@ -359,7 +372,7 @@ function checkWeekReset(){
   if(state.weekKey!==wk){
     state.weekKey=wk; state.choreStatus={}; state.subtaskStatus={};
     state.allowancePaid=false; state.expanded={};
-    state.adhocChores=state.adhocChores.filter(function(c){ return !c.done; });
+    // Ad hoc chores persist across weeks until manually deleted
     saveState();
   }
 }
@@ -382,7 +395,6 @@ function allWeeklyDone(){ return WEEKLY_CHORES.every(function(c){ return isChore
 function getTotalTasks(){
   var t=0;
   WEEKLY_CHORES.forEach(function(c){ t+=c.subtasks?c.subtasks.length:1; });
-  state.adhocChores.forEach(function(){ t++; });
   return t;
 }
 
@@ -392,7 +404,6 @@ function getCompletedTasks(){
     if(c.subtasks) c.subtasks.forEach(function(s){ if(state.subtaskStatus[s.id]) d++; });
     else if(state.choreStatus[c.id]) d++;
   });
-  state.adhocChores.forEach(function(c){ if(c.done) d++; });
   return d;
 }
 
@@ -547,19 +558,46 @@ function toggleAdhoc(i){
   var cards=document.querySelectorAll('.adhoc-card');
   var cd=cards[i], ck=document.getElementById('adhoc-check-'+i);
   if(chore.done){
+    // Uncheck
     chore.done=false;
     state.balance-=chore.value;
     addTx('↩️ '+chore.name+' (undone)',-chore.value);
     if(ck){ ck.innerHTML=''; ck.classList.remove('checked'); }
     if(cd){ cd.classList.remove('done'); }
+    saveState(); renderBalance(); renderAdhoc();
   } else {
+    // Complete it
     chore.done=true;
     state.balance+=chore.value;
     addTx('✅ '+chore.name,chore.value);
     if(ck){ ck.innerHTML='✓'; ck.classList.add('checked'); pulse(ck); }
     if(cd){ cd.classList.add('done'); burstParticles(getCenter(cd),'main'); }
+    saveState(); renderBalance(); renderAdhoc();
+    // Show delete prompt after short delay
+    setTimeout(function(){ openDeletePrompt(i); }, 800);
   }
-  saveState(); renderBalance(); renderProgress();
+}
+
+function openDeletePrompt(i){
+  state.pendingDeleteIndex = i;
+  document.getElementById('delete-chore-name').textContent = state.adhocChores[i].name;
+  document.getElementById('delete-pin-input').value='';
+  document.getElementById('delete-pin-error').style.display='none';
+  document.getElementById('delete-modal').classList.add('open');
+}
+
+function checkDeletePin(){
+  var v=document.getElementById('delete-pin-input').value;
+  if(v===PARENT_PIN){
+    var i=state.pendingDeleteIndex;
+    state.adhocChores.splice(i,1);
+    saveState();
+    closeModal('delete-modal');
+    renderAdhoc();
+  } else {
+    document.getElementById('delete-pin-error').style.display='block';
+    document.getElementById('delete-pin-input').value='';
+  }
 }
 
 function checkAllowance(){
@@ -617,6 +655,7 @@ function bigCelebration(){
 function openPinModal(){ document.getElementById('pin-input').value=''; document.getElementById('pin-error').style.display='none'; document.getElementById('pin-modal').classList.add('open'); }
 function checkPin(){ var v=document.getElementById('pin-input').value; if(v===PARENT_PIN){ closeModal('pin-modal'); openParentPanel(); } else{ document.getElementById('pin-error').style.display='block'; document.getElementById('pin-input').value=''; } }
 document.getElementById('pin-input').addEventListener('keyup',function(e){ if(e.key==='Enter') checkPin(); });
+document.getElementById('delete-pin-input').addEventListener('keyup',function(e){ if(e.key==='Enter') checkDeletePin(); });
 function openParentPanel(){ switchTab('spend'); renderEmojiPicker(); renderTxList(); document.getElementById('parent-modal').classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 function switchTab(tab){
