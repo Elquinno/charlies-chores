@@ -21,6 +21,54 @@
     --radius: 20px;
   }
 
+  /* ── Dark mode overrides ── */
+  body.dark {
+    --bg: #0A1628;
+    --card: #0F1E35;
+    --card2: #152844;
+    --text: #EFF6FF;
+    --muted: #6B8BAD;
+    --border: rgba(14,165,233,0.22);
+  }
+
+  body.dark .timer-bar { background: #0F1E35; border-color: #1E3A5F; }
+  body.dark .week-progress-track { background: rgba(255,255,255,0.07); }
+  body.dark .chore-check { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.18); }
+  body.dark .sub-check { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.14); }
+  body.dark .subtasks { border-top-color: rgba(255,255,255,0.06); }
+  body.dark .subtask-item { border-bottom-color: rgba(255,255,255,0.04); }
+  body.dark .subtask-item:active { background: rgba(255,255,255,0.04); }
+  body.dark .adhoc-card { background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(249,115,22,0.08)); }
+  body.dark .modal-input { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.11); }
+  body.dark .btn-secondary { background: rgba(255,255,255,0.07); }
+  body.dark .emoji-opt { background: rgba(255,255,255,0.06); }
+  body.dark .tab-btn { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.09); }
+  body.dark .tx-item { border-bottom-color: rgba(255,255,255,0.05); }
+  body.dark .ring-bg { stroke: rgba(255,255,255,0.07); }
+  body.dark .chore-card { box-shadow: none; }
+  body.dark .progress-area { box-shadow: none; }
+  body.dark .modal { box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  body.dark .section-title { color: #38BDF8; }
+  body.dark .chore-sub-pill { background: rgba(14,165,233,0.2); color: #38BDF8; }
+  body.dark .tab-btn.active { background: rgba(14,165,233,0.22); border-color: #38BDF8; color: #38BDF8; }
+  body.dark .emoji-opt.selected { border-color: #38BDF8; background: rgba(56,189,248,0.18); }
+  body.dark .modal-input:focus { border-color: #38BDF8; }
+
+  /* ── Theme toggle button ── */
+  .theme-toggle {
+    position: absolute; top: 18px; right: 16px;
+    background: rgba(255,255,255,0.18);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    border-radius: 30px; padding: 5px 12px;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; font-weight: 800; color: #fff;
+    transition: background 0.2s;
+    z-index: 10;
+  }
+  .theme-toggle:active { background: rgba(255,255,255,0.28); }
+  .theme-toggle-icon { font-size: 1rem; transition: transform 0.4s; }
+  body.dark .theme-toggle-icon { transform: rotate(180deg); }
+
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
@@ -44,6 +92,7 @@
     text-align: center;
     border-bottom: 2px solid rgba(255,255,255,0.3);
     box-shadow: 0 4px 20px rgba(2,132,199,0.25);
+    position: relative;
   }
 
   .header h1 {
@@ -195,6 +244,10 @@
 <canvas id="particle-canvas"></canvas>
 
 <div class="header">
+  <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn">
+    <span class="theme-toggle-icon" id="theme-icon">🌙</span>
+    <span id="theme-label">Dark</span>
+  </button>
   <h1>⭐ Charlie's Chores ⭐</h1>
   <div class="header-sub">Keep it up — you're doing amazing!</div>
 </div>
@@ -217,7 +270,7 @@
   <div class="bank-label">💰 Charlie's Bank</div>
   <div class="bank-amount" id="balance-display">$0<span class="cents">.00</span></div>
   <div class="bank-footer">
-    <div class="allowance-badge">🎯 Weekly Allowance: <strong>$10</strong></div>
+    <div class="allowance-badge">🎯 Weekly Allowance: <strong>$15</strong></div>
     <button class="parent-btn" onclick="openPinModal()">👨‍💼 Parent</button>
   </div>
 </div>
@@ -251,7 +304,7 @@
   <div class="cel-emoji">🥳</div>
   <div class="cel-title">All Done!</div>
   <div class="cel-sub">You crushed it this week, Charlie!</div>
-  <div class="cel-reward">+$10.00</div>
+  <div class="cel-reward">+$15.00</div>
   <div class="cel-note">Weekly Allowance added to your bank!</div>
   <button class="cel-btn" onclick="closeCelebration()">Woohoo! 🎉</button>
 </div>
@@ -345,11 +398,13 @@ const Store = (function(){
 
 const WEEKLY_CHORES = [
   { id:'clean-room', emoji:'🛏️', name:'Clean My Room', desc:'Tidy up everything!',
-    subtasks:[{id:'cr-1',label:'Pick up & organize'},{id:'cr-2',label:'Make the bed'},{id:'cr-3',label:'Tidy the desk'}] },
+    subtasks:[{id:'cr-1',label:'Pick up & organize'},{id:'cr-2',label:'Make the bed'}] },
   { id:'vacuum', emoji:'🧹', name:'Vacuuming', desc:'Get all the floors sparkling!',
-    subtasks:[{id:'vac-1',label:'Vacuum my room'},{id:'vac-2',label:'Vacuum upstairs hallway'},{id:'vac-3',label:'Vacuum bathroom'}] },
+    subtasks:[{id:'vac-1',label:'Vacuum my room'},{id:'vac-2',label:'Vacuum upstairs'},{id:'vac-3',label:'Vacuum downstairs'}] },
   { id:'laundry', emoji:'🧺', name:'Laundry', desc:'Gather and take to laundry room', subtasks:null },
-  { id:'dishwasher', emoji:'🍽️', name:'Unload Dishwasher', desc:'Put everything away neatly', subtasks:null }
+  { id:'dishwasher', emoji:'🍽️', name:'Unload Dishwasher', desc:'Put everything away neatly', subtasks:null },
+  { id:'dog-poop', emoji:'💩', name:'Pick Up Dog Poop', desc:'Clean up the yard', subtasks:null },
+  { id:'clean-rails', emoji:'🧽', name:'Clean the Rails', desc:'Wipe down the stair rails', subtasks:null }
 ];
 
 const EMOJIS = ['⭐','🌟','🚗','🌈','🐕','🏆','🎮','🍕','🧹','🛒','🏠','🌿','📦','🧴','💪','🎯','🔧','🌻','💩','🎨'];
@@ -602,7 +657,7 @@ function checkDeletePin(){
 
 function checkAllowance(){
   if(allWeeklyDone()&&!state.allowancePaid){
-    state.allowancePaid=true; state.balance+=1000; addTx('🏆 Weekly Allowance',1000); saveState();
+    state.allowancePaid=true; state.balance+=1500; addTx('🏆 Weekly Allowance',1500); saveState();
     setTimeout(function(){ renderBalance(); bigCelebration(); },600);
   }
 }
@@ -702,6 +757,29 @@ function addBonusChore(){
 }
 function closeCelebration(){ document.getElementById('celebration').classList.remove('show'); }
 document.querySelectorAll('.modal-overlay').forEach(function(o){ o.addEventListener('click',function(e){ if(e.target===o) o.classList.remove('open'); }); });
+
+// ── Theme toggle ──
+function applyTheme(dark){
+  if(dark){
+    document.body.classList.add('dark');
+    document.getElementById('theme-icon').textContent = '☀️';
+    document.getElementById('theme-label').textContent = 'Light';
+  } else {
+    document.body.classList.remove('dark');
+    document.getElementById('theme-icon').textContent = '🌙';
+    document.getElementById('theme-label').textContent = 'Dark';
+  }
+}
+
+function toggleTheme(){
+  var isDark = document.body.classList.contains('dark');
+  state.darkMode = !isDark;
+  saveState();
+  applyTheme(state.darkMode);
+}
+
+// Apply saved theme before first render
+applyTheme(!!state.darkMode);
 
 render();
 setInterval(renderTimerBar,60000);
