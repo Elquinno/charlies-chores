@@ -1103,7 +1103,7 @@ function renderAdhoc(){
     var chore=adhoc[key];
     var card=document.createElement('div');
     card.className='chore-card adhoc-card'+(chore.done?' done':'');
-    card.innerHTML='<div class="chore-main" onclick="event.stopPropagation();toggleAdhoc(\''+key+'\')">'++
+    card.innerHTML='<div class="chore-main" onclick="event.stopPropagation();toggleAdhoc(\''+key+'\')">'
       '<div class="chore-emoji">'+chore.emoji+'</div>'+
       '<div class="chore-info"><div class="chore-name">'+chore.name+'</div><div class="chore-desc">Bonus chore • tap to complete</div></div>'+
       '<div class="adhoc-value">+'+fmtMoney(chore.value)+'</div>'+
