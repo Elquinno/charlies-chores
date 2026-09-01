@@ -556,12 +556,16 @@ function listenToFirebase() {
         data.subtaskStatus = {};
         data.allowancePaid = false;
         data.expanded = {};
-        // keep adhocChores as-is
       }
+      // Ensure all properties exist
+      data.choreStatus = data.choreStatus || {};
+      data.subtaskStatus = data.subtaskStatus || {};
+      data.adhocChores = data.adhocChores || {};
+      data.expanded = data.expanded || {};
+      data.transactions = data.transactions || [];
+      data.balance = data.balance || 0;
+      data.allowancePaid = data.allowancePaid || false;
       state = data;
-      if(!state.adhocChores) state.adhocChores = {};
-      if(!state.expanded) state.expanded = {};
-      if(!state.transactions) state.transactions = [];
     }
     setSyncing('synced');
     renderAll();
@@ -721,9 +725,11 @@ function openUserModal() {
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 function isChoreComplete(chore) {
+  var subtaskStatus = state.subtaskStatus || {};
+  var choreStatus = state.choreStatus || {};
   return chore.subtasks
-    ? chore.subtasks.every(function(s){ return state.subtaskStatus[s.id]; })
-    : !!state.choreStatus[chore.id];
+    ? chore.subtasks.every(function(s){ return subtaskStatus[s.id]; })
+    : !!choreStatus[chore.id];
 }
 
 function allWeeklyDone() { return WEEKLY_CHORES.every(function(c){ return isChoreComplete(c); }); }
@@ -736,9 +742,11 @@ function getTotalTasks() {
 
 function getCompletedTasks() {
   var d=0;
+  var subtaskStatus = state.subtaskStatus || {};
+  var choreStatus = state.choreStatus || {};
   WEEKLY_CHORES.forEach(function(c){
-    if(c.subtasks) c.subtasks.forEach(function(s){ if(state.subtaskStatus[s.id]) d++; });
-    else if(state.choreStatus[c.id]) d++;
+    if(c.subtasks) c.subtasks.forEach(function(s){ if(subtaskStatus[s.id]) d++; });
+    else if(choreStatus[c.id]) d++;
   });
   return d;
 }
